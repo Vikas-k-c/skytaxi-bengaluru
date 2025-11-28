@@ -115,25 +115,27 @@ export const MapSelector = ({ onLocationsSelected }: MapSelectorProps) => {
           zoom={12}
           style={{ height: "100%", width: "100%" }}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapClickHandler
-            onPickupSet={handlePickupSet}
-            onDestinationSet={handleDestinationSet}
-            pickupMode={pickupMode}
-          />
-          {pickup && (
-            <Marker position={[pickup.lat, pickup.lng]}>
-              <Popup>Pickup Location</Popup>
-            </Marker>
-          )}
-          {destination && (
-            <Marker position={[destination.lat, destination.lng]}>
-              <Popup>Destination</Popup>
-            </Marker>
-          )}
+          <>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <MapClickHandler
+              onPickupSet={handlePickupSet}
+              onDestinationSet={handleDestinationSet}
+              pickupMode={pickupMode}
+            />
+            {pickup && (
+              <Marker position={[pickup.lat, pickup.lng]}>
+                <Popup>Pickup Location</Popup>
+              </Marker>
+            )}
+            {destination && (
+              <Marker position={[destination.lat, destination.lng]}>
+                <Popup>Destination</Popup>
+              </Marker>
+            )}
+          </>
         </MapContainer>
       </div>
 

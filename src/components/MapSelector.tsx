@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 // Fix for default marker icons in Leaflet
@@ -27,55 +26,96 @@ interface MapSelectorProps {
   onLocationsSelected: (pickup: Location, destination: Location) => void;
 }
 
-const MapClickHandler = ({
-  onPickupSet,
-  onDestinationSet,
-  pickupMode,
-}: {
-  onPickupSet: (location: Location) => void;
-  onDestinationSet: (location: Location) => void;
-  pickupMode: boolean;
-}) => {
-  useMapEvents({
-    click: (e) => {
-      const { lat, lng } = e.latlng;
-      if (pickupMode) {
-        onPickupSet({ lat, lng });
-      } else {
-        onDestinationSet({ lat, lng });
-      }
-    },
-  });
-  return null;
-};
-
 export const MapSelector = ({ onLocationsSelected }: MapSelectorProps) => {
   const [pickup, setPickup] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [pickupMode, setPickupMode] = useState(true);
-  
+
+  // Refs for Leaflet map and markers
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const pickupMarkerRef = useRef<L.Marker | null>(null);
+  const destinationMarkerRef = useRef<L.Marker | null>(null);
+  const pickupModeRef = useRef(true);
+
+  // Sync ref with state for use in Leaflet event handler
+  useEffect(() => {
+    pickupModeRef.current = pickupMode;
+  }, [pickupMode]);
+
   // Bengaluru coordinates
   const centerPosition: [number, number] = [12.9716, 77.5946];
 
+  // Initialize Leaflet map once
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    mapRef.current = L.map(mapContainerRef.current).setView(centerPosition, 12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(mapRef.current);
+
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (pickupModeRef.current) {
+        setPickup({ lat, lng });
+        setPickupMode(false);
+      } else {
+        setDestination({ lat, lng });
+      }
+    };
+
+    mapRef.current.on("click", handleClick);
+
+    return () => {
+      mapRef.current?.off("click", handleClick);
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update markers when locations change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    if (pickup) {
+      if (pickupMarkerRef.current) {
+        pickupMarkerRef.current.setLatLng(pickup);
+      } else {
+        pickupMarkerRef.current = L.marker(pickup).addTo(mapRef.current);
+        pickupMarkerRef.current.bindPopup("Pickup Location");
+      }
+    } else if (pickupMarkerRef.current) {
+      mapRef.current.removeLayer(pickupMarkerRef.current);
+      pickupMarkerRef.current = null;
+    }
+
+    if (destination) {
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.setLatLng(destination);
+      } else {
+        destinationMarkerRef.current = L.marker(destination).addTo(mapRef.current);
+        destinationMarkerRef.current.bindPopup("Destination");
+      }
+    } else if (destinationMarkerRef.current) {
+      mapRef.current.removeLayer(destinationMarkerRef.current);
+      destinationMarkerRef.current = null;
+    }
+  }, [pickup, destination]);
+
+  // Notify parent when both locations are set
   useEffect(() => {
     if (pickup && destination) {
       onLocationsSelected(pickup, destination);
     }
   }, [pickup, destination, onLocationsSelected]);
 
-  const handlePickupSet = (location: Location) => {
-    setPickup(location);
-    setPickupMode(false);
-  };
-
-  const handleDestinationSet = (location: Location) => {
-    setDestination(location);
-  };
-
   const handleReset = () => {
     setPickup(null);
     setDestination(null);
     setPickupMode(true);
+    pickupModeRef.current = true;
   };
 
   return (
@@ -110,33 +150,7 @@ export const MapSelector = ({ onLocationsSelected }: MapSelectorProps) => {
       </div>
 
       <div className="rounded-lg overflow-hidden border-2 border-border mb-4" style={{ height: "400px" }}>
-        <MapContainer
-          center={centerPosition}
-          zoom={12}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <MapClickHandler
-              onPickupSet={handlePickupSet}
-              onDestinationSet={handleDestinationSet}
-              pickupMode={pickupMode}
-            />
-            {pickup && (
-              <Marker position={[pickup.lat, pickup.lng]}>
-                <Popup>Pickup Location</Popup>
-              </Marker>
-            )}
-            {destination && (
-              <Marker position={[destination.lat, destination.lng]}>
-                <Popup>Destination</Popup>
-              </Marker>
-            )}
-          </>
-        </MapContainer>
+        <div ref={mapContainerRef} className="w-full h-full" />
       </div>
 
       {(pickup || destination) && (

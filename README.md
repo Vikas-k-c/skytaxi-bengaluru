@@ -1,4 +1,4 @@
-# say hi to skytaxi-bengaluru
+# hi to skytaxi-bengaluru
 
 ## Project info
 

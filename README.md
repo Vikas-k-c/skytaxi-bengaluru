@@ -1,4 +1,4 @@
-# Welcome to skytaxi-bengaluru
+# say hi to skytaxi-bengaluru
 
 ## Project info
 
